@@ -34,6 +34,7 @@ void blink_led() {
     while(true) {
         gpio_put(pin, 1);
         sleep_ms(100);
+        
         gpio_put(pin, 0);
         sleep_ms(100);
     }

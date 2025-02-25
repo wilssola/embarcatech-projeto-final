@@ -117,10 +117,12 @@ void ssd1306_send_data(ssd1306_t *ssd) {
 void ssd1306_pixel(ssd1306_t *ssd, uint8_t x, uint8_t y, bool value) {
   uint16_t index = (y >> 3) + (x << 3) + 1;
   uint8_t pixel = (y & 0b111);
-  if (value)
+  if (value) {
     ssd->ram_buffer[index] |= (1 << pixel);
-  else
+  }
+  else {
     ssd->ram_buffer[index] &= ~(1 << pixel);
+  }
 }
 
 // Função para preencher o display
@@ -138,6 +140,7 @@ void ssd1306_rect(ssd1306_t *ssd, uint8_t top, uint8_t left, uint8_t width, uint
     ssd1306_pixel(ssd, x, top, value);
     ssd1306_pixel(ssd, x, top + height - 1, value);
   }
+
   for (uint8_t y = top; y < top + height; ++y) {
     ssd1306_pixel(ssd, left, y, value);
     ssd1306_pixel(ssd, left + width - 1, y, value);
@@ -196,6 +199,7 @@ void ssd1306_vline(ssd1306_t *ssd, uint8_t x, uint8_t y0, uint8_t y1, bool value
 // Função para desenhar um caractere no display
 void ssd1306_draw_char(ssd1306_t *ssd, char c, uint8_t x, uint8_t y) {
   uint16_t index = 0;
+
   if (c >= 'A' && c <= 'Z') {
     index = (c - 'A' + 11) * 8; // Para letras maiúsculas
   } else if (c >= '0' && c <= '9') {
@@ -217,10 +221,12 @@ void ssd1306_draw_string(ssd1306_t *ssd, const char *str, uint8_t x, uint8_t y) 
   while (*str) {
     ssd1306_draw_char(ssd, *str++, x, y);
     x += 8;
+    
     if (x + 8 >= ssd->width) {
       x = 0;
       y += 8;
     }
+
     if (y + 8 >= ssd->height) {
       break;
     }
