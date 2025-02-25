@@ -12,10 +12,9 @@
 
 #include "ws2812.pio.h"
 
-#include "include/raspberry26x32.h"
 #include "include/ssd1306_font.h"
 
-#include "include/pin.h"
+#include "include/const.h"
 #include "include/led.h"
 #include "include/button.h"
 #include "include/ws2812.h"
@@ -103,13 +102,13 @@ void ws2812_init() {
 }
 
 void joystick_init() {
-    gpio_init(JOYSTICK_SW_PIN);
-    gpio_set_dir(JOYSTICK_SW_PIN, GPIO_IN);
-    gpio_pull_up(JOYSTICK_SW_PIN);
-
     adc_init();
     adc_gpio_init(JOYSTICK_VRX_PIN);
     adc_gpio_init(JOYSTICK_VRY_PIN);
+
+    gpio_init(JOYSTICK_SW_PIN);
+    gpio_set_dir(JOYSTICK_SW_PIN, GPIO_IN);
+    gpio_pull_up(JOYSTICK_SW_PIN);
 }
 
 void core1_entry() {
@@ -257,6 +256,40 @@ void toggle_green_led_and_border(ssd1306_t *ssd) {
     ssd1306_send_data(ssd);
 }
 
+// Função para inicializar o microfone
+void mic_init() {
+    adc_init();
+    adc_gpio_init(MIC_PIN);
+}
+
+// Função para ler o nível de áudio do microfone
+uint16_t read_mic() {    
+    adc_select_input(ADC_CHANNEL_2);
+    return adc_read();
+}
+
+void mic_detect(ssd1306_t *ssd, uint16_t mic_value) {
+    if (mic_value > MIC_LIMIAR_1 && mic_value < MIC_LIMIAR_2) {
+        ssd1306_draw_string(ssd, "Som medio detectado!", 0, 0);
+        ssd1306_send_data(ssd);
+
+        gpio_put(LED_RGB_BLUE_PIN, true);  // Liga o LED azul
+        gpio_put(LED_RGB_RED_PIN, false);  // Desliga o LED vermelho
+    } else if (mic_value > MIC_LIMIAR_2) {
+        ssd1306_draw_string(ssd, "Som alto detectado!", 0, 0);
+        ssd1306_send_data(ssd);
+
+        gpio_put(LED_RGB_BLUE_PIN, false); // Desliga o LED azul
+        gpio_put(LED_RGB_RED_PIN, true);   // Liga o LED vermelho
+    } else {
+        ssd1306_draw_string(ssd, "Som nao detectado!", 0, 0);
+        ssd1306_send_data(ssd);
+
+        gpio_put(LED_RGB_BLUE_PIN, false); // Desliga o LED azul
+        gpio_put(LED_RGB_RED_PIN, false);  // Desliga o LED vermelho
+    }
+}
+
 int main() {
     stdio_init_all();
 
@@ -264,7 +297,7 @@ int main() {
     led_init();
 
     // Inicializa os LEDs RGB usando PWM
-    led_pwm_init();
+    //led_pwm_init();
 
     // Inicializa os pinos dos botões com pull-up
     button_init();
@@ -273,7 +306,16 @@ int main() {
     ws2812_init();
 
     // Inicializa o joystick
-    joystick_init();
+    //joystick_init();
+
+    // Inicializa o microfone
+    mic_init();
+
+    gpio_init(LED_RGB_BLUE_PIN);
+    gpio_set_dir(LED_RGB_BLUE_PIN, GPIO_OUT);
+
+    gpio_init(LED_RGB_RED_PIN);
+    gpio_set_dir(LED_RGB_RED_PIN, GPIO_OUT);
 
     // Inicializa o I2C
     i2c_init(I2C_PORT, I2C_BAUDRATE);
@@ -290,6 +332,8 @@ int main() {
 
     display_clean(&ssd);
 
+    uint64_t interval = 1000000 / MIC_SAMPLE_RATE;
+
     while (true) {
         if (stdio_usb_connected()) {
             int c = getchar_timeout_us(0);
@@ -305,7 +349,7 @@ int main() {
             }
         }
         
-        read_joystick(&vrx, &vry);
+        //read_joystick(&vrx, &vry);
 
         // Atualiza a posição do quadrado com base nos valores do joystick
         square_x = (vrx * (WIDTH - 8)) / 4095;
@@ -317,22 +361,26 @@ int main() {
         ssd1306_send_data(&ssd);
 
         // Verifica se o botão do joystick foi pressionado
-        if (joystick_pressed) {
+        /*if (joystick_pressed) {
             toggle_green_led_and_border(&ssd);
             joystick_pressed = false;
-        }
+        }*/
 
         // Verifica se o botão A foi pressionado
-        if (button_a_pressed) {
+        /*if (button_a_pressed) {
             led_pwm_enabled = !led_pwm_enabled;
             if (!led_pwm_enabled) {
                 pwm_set_gpio_level(LED_RGB_RED_PIN, 0);
                 pwm_set_gpio_level(LED_RGB_BLUE_PIN, 0);
             }
             button_a_pressed = false;
-        }
+        }*/
 
-        sleep_ms(50);
+        // Verifica o nível de áudio do microfone
+        uint16_t mic_level = read_mic();
+        mic_detect(&ssd, mic_level);
+
+        sleep_ms(interval);
     }
 
     return 0;

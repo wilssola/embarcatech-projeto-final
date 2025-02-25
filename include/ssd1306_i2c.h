@@ -3,7 +3,7 @@
 #include "hardware/i2c.h"
 
 #include "ssd1306_font.h"
-#include "pin.h"
+#include "const.h"
 
 #ifndef SSD1306_I2C_H
 #define SSD1306_I2C_H
