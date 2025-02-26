@@ -50,6 +50,8 @@ uint slice_num_red, slice_num_green, slice_num_blue;
 
 uint16_t vrx, vry;
 
+uint16_t adjusted_volume = 0;
+
 uint8_t square_x = (WIDTH - 8) / 2;
 uint8_t square_y = (HEIGHT - 8) / 2;
 
@@ -393,7 +395,11 @@ void play_sound(uint16_t mic_value, uint16_t volume) {
     uint16_t frequency = (mic_value * 1024) / MIC_LIMIAR_2;
 
     // Ajusta o volume do som
-    uint16_t adjusted_volume = (volume * 255) / 4096;
+    if (volume < 128) { // Verifica se o joystick está na posição inferior
+        adjusted_volume = 0;
+    } else {
+        adjusted_volume = (volume * 255) / 4096;
+    }
 
     // Ativa os buzzers com o volume ajustado
     gpio_put(BUZZER_A_PIN, true);
