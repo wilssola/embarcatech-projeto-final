@@ -21,6 +21,14 @@
 #include "include/ws2812.h"
 #include "include/ssd1306_i2c.h"
 
+typedef enum {
+    MODE_WAVEFORM = 0,
+    MODE_SPECTRUM,
+    MODE_VU_METER,
+    MODE_RADAR,
+    MODE_LENGTH
+} display_mode_t;
+
 volatile uint8_t number = MIN_NUMBER;
 
 volatile uint8_t led_color = MIN_LED;
@@ -42,6 +50,8 @@ bool led_pwm_enabled = true;
 
 bool border_style = false;
 uint8_t border_style_index = 0;
+
+display_mode_t mode = MODE_WAVEFORM, previous_mode = MODE_WAVEFORM;
 
 // Função para inicializar o LED RGB
 void led_init() {    
@@ -268,6 +278,11 @@ uint16_t read_mic() {
 }
 
 void display_waveform(ssd1306_t *ssd, uint16_t mic_value) {
+    if (previous_mode != MODE_WAVEFORM) {
+        display_clean(ssd);
+        previous_mode = MODE_WAVEFORM;
+    }
+    
     static uint8_t x = 0;
     static uint8_t prev_y = HEIGHT / 2;
 
@@ -287,14 +302,22 @@ void display_waveform(ssd1306_t *ssd, uint16_t mic_value) {
 void display_spectrum(ssd1306_t *ssd, uint16_t mic_value) {
     static uint8_t bar_width = WIDTH / 16;
     static uint8_t bar_heights[16] = {0};
+    static uint8_t mic_values[16] = {0};
+    static uint8_t index = 0;
 
-    uint8_t bar_index = (mic_value / 256) % 16;
-    uint8_t bar_height = (mic_value % 256) / 4;
+    // Adiciona o valor do microfone ao buffer circular
+    mic_values[index] = mic_value;
+    index = (index + 1) % 16;
 
-    bar_heights[bar_index] = bar_height;
+    // Calcula a altura das barras com base nos valores do microfone
+    for (uint8_t i = 0; i < 16; ++i) {
+        uint8_t value = mic_values[(index + i) % 16];
+        bar_heights[i] = (value % 256) / 4;
+    }
 
     display_clean(ssd);
 
+    // Desenha as barras no display
     for (uint8_t i = 0; i < 16; ++i) {
         ssd1306_rect(ssd, HEIGHT - bar_heights[i], i * bar_width, bar_width - 1, bar_heights[i], true, true);
     }
@@ -303,9 +326,9 @@ void display_spectrum(ssd1306_t *ssd, uint16_t mic_value) {
 }
 
 void display_vu_meter(ssd1306_t *ssd, uint16_t mic_value) {
-    uint8_t bar_length = (mic_value * WIDTH) / 4096;
-
     display_clean(ssd);
+
+    uint8_t bar_length = (mic_value * WIDTH) / MIC_LIMIAR_2;
 
     ssd1306_rect(ssd, HEIGHT / 2 - 4, 0, bar_length, 8, true, true);
 
@@ -387,7 +410,6 @@ int main() {
     display_clean(&ssd);
 
     uint64_t interval = 1000000 / MIC_SAMPLE_RATE;
-    uint8_t mode = 0; // 0: Waveform, 1: Spectrum, 2: VU Meter
 
     while (true) {
         if (stdio_usb_connected()) {
@@ -404,22 +426,28 @@ int main() {
             }
         }
 
+        if (button_a_pressed) {
+            previous_mode = mode;
+            mode = (mode + 1) % MODE_LENGTH;
+            button_a_pressed = false;
+        }
+
         // Verifica o nível de áudio do microfone
         uint16_t mic_level = read_mic();
 
         mic_detect(mic_level);
 
         switch (mode) {
-            case 0:
+            case MODE_WAVEFORM:
                 display_waveform(&ssd, mic_level);
                 break;
-            case 1:
+            case MODE_SPECTRUM:
                 display_spectrum(&ssd, mic_level);
                 break;
-            case 2:
+            case MODE_VU_METER:
                 display_vu_meter(&ssd, mic_level);
                 break;
-            case 3:
+            case MODE_RADAR:
                 display_radar(&ssd, mic_level);
                 break;
         }
