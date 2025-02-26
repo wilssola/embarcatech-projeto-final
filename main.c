@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <math.h>
 #include "pico/stdlib.h"
 #include "pico/stdio_usb.h"
 #include "pico/multicore.h"
@@ -109,6 +110,16 @@ void joystick_init() {
     gpio_init(JOYSTICK_SW_PIN);
     gpio_set_dir(JOYSTICK_SW_PIN, GPIO_IN);
     gpio_pull_up(JOYSTICK_SW_PIN);
+}
+
+void buzzer_init() {
+    gpio_init(BUZZER_A_PIN);
+    gpio_set_dir(BUZZER_A_PIN, GPIO_OUT);
+    gpio_put(BUZZER_A_PIN, false);
+
+    gpio_init(BUZZER_B_PIN);
+    gpio_set_dir(BUZZER_B_PIN, GPIO_OUT);
+    gpio_put(BUZZER_B_PIN, false);
 }
 
 void core1_entry() {
@@ -313,6 +324,21 @@ void display_vu_meter(ssd1306_t *ssd, uint16_t mic_value) {
     ssd1306_send_data(ssd);
 }
 
+void display_radar(ssd1306_t *ssd, uint16_t mic_value) {
+    display_clean(ssd);
+
+    // Desenha o círculo do radar
+    ssd1306_circle(ssd, WIDTH / 2, HEIGHT / 2, HEIGHT / 2 - 1, true);
+
+    // Desenha a linha do radar
+    uint8_t angle = ((mic_value * 360) / MIC_LIMIAR_2) % 360;
+    uint8_t x = WIDTH / 2 + (HEIGHT / 2 - 1) * cos(angle * M_PI / 180);
+    uint8_t y = HEIGHT / 2 + (HEIGHT / 2 - 1) * -sin(angle * M_PI / 180);
+    ssd1306_line(ssd, WIDTH / 2, HEIGHT / 2, x, y, true);
+
+    ssd1306_send_data(ssd);
+}
+
 void mic_detect(ssd1306_t *ssd, uint16_t mic_value) {
     if (mic_value > MIC_LIMIAR_1 && mic_value < MIC_LIMIAR_2) {
         ssd1306_draw_string(ssd, "Som medio detectado!", 0, 0);
@@ -355,6 +381,9 @@ int main() {
 
     // Inicializa o microfone
     mic_init();
+    
+    // Inicializa os buzzers
+    buzzer_init();
 
     gpio_init(LED_RGB_BLUE_PIN);
     gpio_set_dir(LED_RGB_BLUE_PIN, GPIO_OUT);
@@ -378,7 +407,7 @@ int main() {
     display_clean(&ssd);
 
     uint64_t interval = 1000000 / MIC_SAMPLE_RATE;
-    uint8_t mode = 2; // 0: Waveform, 1: Spectrum, 2: VU Meter
+    uint8_t mode = 3; // 0: Waveform, 1: Spectrum, 2: VU Meter
 
     while (true) {
         if (stdio_usb_connected()) {
@@ -407,6 +436,9 @@ int main() {
                 break;
             case 2:
                 display_vu_meter(&ssd, mic_level);
+                break;
+            case 3:
+                display_radar(&ssd, mic_level);
                 break;
         }
 

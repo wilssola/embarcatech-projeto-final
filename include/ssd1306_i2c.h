@@ -233,4 +233,32 @@ void ssd1306_draw_string(ssd1306_t *ssd, const char *str, uint8_t x, uint8_t y) 
   }
 }
 
+// Função para desenhar um círculo no display
+void ssd1306_circle(ssd1306_t *ssd, uint8_t x0, uint8_t y0, uint8_t radius, bool value) {
+  int x = radius;
+  int y = 0;
+  int err = 0;
+
+  while (x >= y) {
+      ssd1306_pixel(ssd, x0 + x, y0 + y, value);
+      ssd1306_pixel(ssd, x0 + y, y0 + x, value);
+      ssd1306_pixel(ssd, x0 - y, y0 + x, value);
+      ssd1306_pixel(ssd, x0 - x, y0 + y, value);
+      ssd1306_pixel(ssd, x0 - x, y0 - y, value);
+      ssd1306_pixel(ssd, x0 - y, y0 - x, value);
+      ssd1306_pixel(ssd, x0 + y, y0 - x, value);
+      ssd1306_pixel(ssd, x0 + x, y0 - y, value);
+
+      if (err <= 0) {
+          y += 1;
+          err += 2 * y + 1;
+      }
+
+      if (err > 0) {
+          x -= 1;
+          err -= 2 * x + 1;
+      }
+  }
+}
+
 #endif

@@ -11,6 +11,8 @@
 #define JOYSTICK_VRY_PIN 27
 #define JOYSTICK_SW_PIN 22
 #define MIC_PIN 28
+#define BUZZER_A_PIN 21
+#define BUZZER_B_PIN 10
 
 #define MIC_LIMIAR_1 2080
 #define MIC_LIMIAR_2 2200
