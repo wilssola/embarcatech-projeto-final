@@ -445,7 +445,6 @@ int main() {
                 break;
             case VIEWER:
                 if (button_a_pressed) {
-                    display_clean(&ssd);
                     previous_mode = mode;
                     mode = (mode + 1) % MODE_LENGTH;
                     button_a_pressed = false;
