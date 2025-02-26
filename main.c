@@ -45,17 +45,17 @@ uint8_t border_style_index = 0;
 
 // Função para inicializar o LED RGB
 void led_init() {    
-    //gpio_init(LED_RGB_RED_PIN);
-    //gpio_set_dir(LED_RGB_RED_PIN, GPIO_OUT);
+    gpio_init(LED_RGB_RED_PIN);
+    gpio_set_dir(LED_RGB_RED_PIN, GPIO_OUT);
 
     gpio_init(LED_RGB_GREEN_PIN);
     gpio_set_dir(LED_RGB_GREEN_PIN, GPIO_OUT);
 
-    //gpio_init(LED_RGB_BLUE_PIN);
-    //gpio_set_dir(LED_RGB_BLUE_PIN, GPIO_OUT);
+    gpio_init(LED_RGB_BLUE_PIN);
+    gpio_set_dir(LED_RGB_BLUE_PIN, GPIO_OUT);
 }
 
-void led_pwm_setup(uint led_pin, uint *slice_num, uint16_t level) {
+void led_pwm_setup(uint led_pin, uint *slice_num, uint16_t led_level) {
     gpio_set_function(led_pin, GPIO_FUNC_PWM);
 
     *slice_num = pwm_gpio_to_slice_num(led_pin);
@@ -63,17 +63,17 @@ void led_pwm_setup(uint led_pin, uint *slice_num, uint16_t level) {
     pwm_set_clkdiv(*slice_num, PWM_DIVIDER);
     pwm_set_wrap(*slice_num, PWM_PERIOD);    
 
-    pwm_set_gpio_level(led_pin, level);
+    pwm_set_gpio_level(led_pin, led_level);
 
     pwm_set_enabled(*slice_num, true);
 }
 
 void led_pwm_init() {
-    led_pwm_setup(LED_RGB_RED_PIN, &slice_num_red, level_red);
+    led_pwm_setup(LED_RGB_RED_PIN, &slice_num_red, 0);
 
-    //led_pwm_setup(LED_RGB_GREEN_PIN, &slice_num_green, level_green);
+    led_pwm_setup(LED_RGB_GREEN_PIN, &slice_num_green, 0);
 
-    led_pwm_setup(LED_RGB_BLUE_PIN, &slice_num_blue, level_blue);
+    led_pwm_setup(LED_RGB_BLUE_PIN, &slice_num_blue, 0);
 }
 
 // Função para inicializar os botões
@@ -89,8 +89,6 @@ void button_init() {
     // Configura interrupções para os botões
     gpio_set_irq_enabled_with_callback(BUTTON_A_PIN, GPIO_IRQ_EDGE_FALL, true, &gpio_button_callback);
     gpio_set_irq_enabled_with_callback(BUTTON_B_PIN, GPIO_IRQ_EDGE_FALL, true, &gpio_button_callback);
-
-    gpio_set_irq_enabled_with_callback(JOYSTICK_SW_PIN, GPIO_IRQ_EDGE_FALL, true, &gpio_button_callback);
 }
 
 // Função para inicializar o controlador WS2812
@@ -110,6 +108,8 @@ void joystick_init() {
     gpio_init(JOYSTICK_SW_PIN);
     gpio_set_dir(JOYSTICK_SW_PIN, GPIO_IN);
     gpio_pull_up(JOYSTICK_SW_PIN);
+
+    gpio_set_irq_enabled_with_callback(JOYSTICK_SW_PIN, GPIO_IRQ_EDGE_FALL, true, &gpio_button_callback);
 }
 
 void buzzer_init() {
@@ -255,18 +255,6 @@ void draw_border(ssd1306_t *ssd) {
     }
 }
 
-void toggle_green_led_and_border(ssd1306_t *ssd) {
-    led_green_state = !led_green_state;
-    gpio_put(LED_RGB_GREEN_PIN, led_green_state);
-
-    border_style = !border_style;
-    border_style_index = !border_style_index;
-
-    display_clean(ssd);
-    draw_border(ssd);
-    ssd1306_send_data(ssd);
-}
-
 // Função para inicializar o microfone
 void mic_init() {
     adc_init();
@@ -339,26 +327,24 @@ void display_radar(ssd1306_t *ssd, uint16_t mic_value) {
     ssd1306_send_data(ssd);
 }
 
-void mic_detect(ssd1306_t *ssd, uint16_t mic_value) {
-    if (mic_value > MIC_LIMIAR_1 && mic_value < MIC_LIMIAR_2) {
-        ssd1306_draw_string(ssd, "Som medio detectado!", 0, 0);
-        ssd1306_send_data(ssd);
-
-        gpio_put(LED_RGB_BLUE_PIN, true);  // Liga o LED azul
-        gpio_put(LED_RGB_RED_PIN, false);  // Desliga o LED vermelho
-    } else if (mic_value > MIC_LIMIAR_2) {
-        ssd1306_draw_string(ssd, "Som alto detectado!", 0, 0);
-        ssd1306_send_data(ssd);
-
-        gpio_put(LED_RGB_BLUE_PIN, false); // Desliga o LED azul
-        gpio_put(LED_RGB_RED_PIN, true);   // Liga o LED vermelho
+void mic_detect(uint16_t mic_value) {
+    if (mic_value > MIC_LIMIAR_2) {
+        level_red = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
+        level_blue = 0;
+        level_green = 0;
+    } else if (mic_value > MIC_LIMIAR_1 && mic_value < MIC_LIMIAR_2) {
+        level_red = 0;
+        level_blue = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
+        level_green = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
     } else {
-        ssd1306_draw_string(ssd, "Som nao detectado!", 0, 0);
-        ssd1306_send_data(ssd);
-
-        gpio_put(LED_RGB_BLUE_PIN, false); // Desliga o LED azul
-        gpio_put(LED_RGB_RED_PIN, false);  // Desliga o LED vermelho
+        level_green = ((mic_value * 255) / MIC_LIMIAR_1) % 255;
+        level_red = 0;
+        level_blue = 0;
     }
+    
+    pwm_set_gpio_level(LED_RGB_RED_PIN, level_red);
+    pwm_set_gpio_level(LED_RGB_BLUE_PIN, level_blue);
+    pwm_set_gpio_level(LED_RGB_GREEN_PIN, level_green);
 }
 
 int main() {
@@ -368,7 +354,7 @@ int main() {
     led_init();
 
     // Inicializa os LEDs RGB usando PWM
-    //led_pwm_init();
+    led_pwm_init();
 
     // Inicializa os pinos dos botões com pull-up
     button_init();
@@ -377,19 +363,13 @@ int main() {
     ws2812_init();
 
     // Inicializa o joystick
-    //joystick_init();
+    joystick_init();
 
     // Inicializa o microfone
     mic_init();
     
     // Inicializa os buzzers
     buzzer_init();
-
-    gpio_init(LED_RGB_BLUE_PIN);
-    gpio_set_dir(LED_RGB_BLUE_PIN, GPIO_OUT);
-
-    gpio_init(LED_RGB_RED_PIN);
-    gpio_set_dir(LED_RGB_RED_PIN, GPIO_OUT);
 
     // Inicializa o I2C
     i2c_init(I2C_PORT, I2C_BAUDRATE);
@@ -407,7 +387,7 @@ int main() {
     display_clean(&ssd);
 
     uint64_t interval = 1000000 / MIC_SAMPLE_RATE;
-    uint8_t mode = 3; // 0: Waveform, 1: Spectrum, 2: VU Meter
+    uint8_t mode = 0; // 0: Waveform, 1: Spectrum, 2: VU Meter
 
     while (true) {
         if (stdio_usb_connected()) {
@@ -426,6 +406,8 @@ int main() {
 
         // Verifica o nível de áudio do microfone
         uint16_t mic_level = read_mic();
+
+        mic_detect(mic_level);
 
         switch (mode) {
             case 0:
