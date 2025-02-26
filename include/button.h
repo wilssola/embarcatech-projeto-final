@@ -3,7 +3,7 @@
 #ifndef BUTTON_H
 #define BUTTON_H
 
-#define DEBOUNCE_DELAY_MS 10
+#define DEBOUNCE_DELAY_MS 50
 
 volatile bool button_a_pressed = false;
 volatile bool button_b_pressed = false;

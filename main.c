@@ -29,6 +29,13 @@ typedef enum {
     MODE_LENGTH
 } display_mode_t;
 
+typedef enum {
+    MENU = 0,
+    VIEWER,
+    ALARM,
+    LENGTH
+} app_mode_t;
+
 volatile uint8_t number = MIN_NUMBER;
 
 volatile uint8_t led_color = MIN_LED;
@@ -52,6 +59,8 @@ bool border_style = false;
 uint8_t border_style_index = 0;
 
 display_mode_t mode = MODE_WAVEFORM, previous_mode = MODE_WAVEFORM;
+
+app_mode_t app_mode = MENU;
 
 // Função para inicializar o LED RGB
 void led_init() {    
@@ -370,6 +379,15 @@ void mic_detect(uint16_t mic_value) {
     pwm_set_gpio_level(LED_RGB_GREEN_PIN, level_green);
 }
 
+// Função para exibir o menu
+void display_menu(ssd1306_t *ssd) {
+    display_clean(ssd);
+    ssd1306_draw_string(ssd, "BitSound", 0, 0);
+    ssd1306_draw_string(ssd, "A Visualizar", 0, 16);
+    ssd1306_draw_string(ssd, "B Armar Alarme", 0, 32);
+    ssd1306_send_data(ssd);
+}
+
 int main() {
     stdio_init_all();
 
@@ -412,47 +430,56 @@ int main() {
     uint64_t interval = 1000000 / MIC_SAMPLE_RATE;
 
     while (true) {
-        if (stdio_usb_connected()) {
-            int c = getchar_timeout_us(0);
-
-            if (c != PICO_ERROR_TIMEOUT) {
-                display_clean(&ssd);
-
-                ssd1306_draw_char(&ssd, c, 0, 0);
-
-                if (c >= '0' && c <= '9') {
-                    display_symbol(c - '0');
+        switch (app_mode) {
+            case MENU:            
+                display_menu(&ssd);
+                if (button_a_pressed) {
+                    display_clean(&ssd);
+                    app_mode = VIEWER;
+                    button_a_pressed = false;
+                } else if (button_b_pressed) {
+                    display_clean(&ssd);
+                    app_mode = ALARM;
+                    button_b_pressed = false;
                 }
-            }
+                break;
+            case VIEWER:
+                if (button_a_pressed) {
+                    display_clean(&ssd);
+                    previous_mode = mode;
+                    mode = (mode + 1) % MODE_LENGTH;
+                    button_a_pressed = false;
+                }
+
+                if (joystick_pressed) {
+                    display_clean(&ssd);
+                    app_mode = MENU;
+                    both_buttons_pressed = false;
+                }
+
+                // Verifica o nível de áudio do microfone
+                uint16_t mic_level = read_mic();
+
+                mic_detect(mic_level);
+
+                switch (mode) {
+                    case MODE_WAVEFORM:
+                        display_waveform(&ssd, mic_level);
+                        break;
+                    case MODE_SPECTRUM:
+                        display_spectrum(&ssd, mic_level);
+                        break;
+                    case MODE_VU_METER:
+                        display_vu_meter(&ssd, mic_level);
+                        break;
+                    case MODE_RADAR:
+                        display_radar(&ssd, mic_level);
+                        break;
+                }
+
+                sleep_ms(interval);
+                break;
         }
-
-        if (button_a_pressed) {
-            previous_mode = mode;
-            mode = (mode + 1) % MODE_LENGTH;
-            button_a_pressed = false;
-        }
-
-        // Verifica o nível de áudio do microfone
-        uint16_t mic_level = read_mic();
-
-        mic_detect(mic_level);
-
-        switch (mode) {
-            case MODE_WAVEFORM:
-                display_waveform(&ssd, mic_level);
-                break;
-            case MODE_SPECTRUM:
-                display_spectrum(&ssd, mic_level);
-                break;
-            case MODE_VU_METER:
-                display_vu_meter(&ssd, mic_level);
-                break;
-            case MODE_RADAR:
-                display_radar(&ssd, mic_level);
-                break;
-        }
-
-        sleep_ms(interval);
     }
 
     return 0;
