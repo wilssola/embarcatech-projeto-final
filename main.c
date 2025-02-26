@@ -388,6 +388,25 @@ void display_menu(ssd1306_t *ssd) {
     ssd1306_send_data(ssd);
 }
 
+void play_sound(uint16_t mic_value, uint16_t volume) {
+    // Define a frequência do som com base no valor do microfone
+    uint16_t frequency = (mic_value * 1024) / MIC_LIMIAR_2;
+
+    // Ajusta o volume do som
+    uint16_t adjusted_volume = (volume * 255) / 4096;
+
+    // Ativa os buzzers com o volume ajustado
+    gpio_put(BUZZER_A_PIN, true);
+    gpio_put(BUZZER_B_PIN, true);
+
+    // Aguarda um curto período de tempo
+    sleep_us(1000000 / frequency / 2 * adjusted_volume);
+
+    // Desativa os buzzers
+    gpio_put(BUZZER_A_PIN, false);
+    gpio_put(BUZZER_B_PIN, false);
+}
+
 int main() {
     stdio_init_all();
 
@@ -460,6 +479,13 @@ int main() {
                 uint16_t mic_level = read_mic();
 
                 mic_detect(mic_level);
+
+                // Lê o valor do eixo Y do joystick para ajustar o volume
+                uint16_t vrx, vry;
+                read_joystick(&vrx, &vry);
+
+                // Chamada para a função play_sound
+                play_sound(mic_level, vry);
 
                 switch (mode) {
                     case MODE_WAVEFORM:
