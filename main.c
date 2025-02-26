@@ -329,12 +329,12 @@ void display_radar(ssd1306_t *ssd, uint16_t mic_value) {
 
 void mic_detect(uint16_t mic_value) {
     if (mic_value > MIC_LIMIAR_2) {
-        level_red = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
+        level_red = ((mic_value * 255) / (2 * MIC_LIMIAR_2)) % 255;
         level_blue = 0;
         level_green = 0;
     } else if (mic_value > MIC_LIMIAR_1 && mic_value < MIC_LIMIAR_2) {
-        level_red = 0;
-        level_blue = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
+        level_red = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
+        level_blue = 0;
         level_green = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
     } else {
         level_green = ((mic_value * 255) / MIC_LIMIAR_1) % 255;
