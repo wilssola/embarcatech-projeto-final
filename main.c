@@ -268,6 +268,51 @@ uint16_t read_mic() {
     return adc_read();
 }
 
+void display_waveform(ssd1306_t *ssd, uint16_t mic_value) {
+    static uint8_t x = 0;
+    static uint8_t prev_y = HEIGHT / 2;
+
+    uint8_t y = HEIGHT / 2 + (mic_value - 2048) / 16;
+
+    ssd1306_line(ssd, x, prev_y, x + 1, y, true);
+    ssd1306_send_data(ssd);
+
+    prev_y = y;
+    x = (x + 1) % WIDTH;
+
+    if (x == 0) {
+        display_clean(ssd);
+    }
+}
+
+void display_spectrum(ssd1306_t *ssd, uint16_t mic_value) {
+    static uint8_t bar_width = WIDTH / 16;
+    static uint8_t bar_heights[16] = {0};
+
+    uint8_t bar_index = (mic_value / 256) % 16;
+    uint8_t bar_height = (mic_value % 256) / 4;
+
+    bar_heights[bar_index] = bar_height;
+
+    display_clean(ssd);
+
+    for (uint8_t i = 0; i < 16; ++i) {
+        ssd1306_rect(ssd, HEIGHT - bar_heights[i], i * bar_width, bar_width - 1, bar_heights[i], true, true);
+    }
+
+    ssd1306_send_data(ssd);
+}
+
+void display_vu_meter(ssd1306_t *ssd, uint16_t mic_value) {
+    uint8_t bar_length = (mic_value * WIDTH) / 4096;
+
+    display_clean(ssd);
+
+    ssd1306_rect(ssd, HEIGHT / 2 - 4, 0, bar_length, 8, true, true);
+
+    ssd1306_send_data(ssd);
+}
+
 void mic_detect(ssd1306_t *ssd, uint16_t mic_value) {
     if (mic_value > MIC_LIMIAR_1 && mic_value < MIC_LIMIAR_2) {
         ssd1306_draw_string(ssd, "Som medio detectado!", 0, 0);
@@ -333,12 +378,13 @@ int main() {
     display_clean(&ssd);
 
     uint64_t interval = 1000000 / MIC_SAMPLE_RATE;
+    uint8_t mode = 2; // 0: Waveform, 1: Spectrum, 2: VU Meter
 
     while (true) {
         if (stdio_usb_connected()) {
             int c = getchar_timeout_us(0);
 
-            if (c != PICO_ERROR_TIMEOUT) {                
+            if (c != PICO_ERROR_TIMEOUT) {
                 display_clean(&ssd);
 
                 ssd1306_draw_char(&ssd, c, 0, 0);
@@ -348,37 +394,21 @@ int main() {
                 }
             }
         }
-        
-        //read_joystick(&vrx, &vry);
-
-        // Atualiza a posição do quadrado com base nos valores do joystick
-        square_x = (vrx * (WIDTH - 8)) / 4095;
-        square_y = ((4095 - vry) * (HEIGHT - 8)) / 4095;
-
-        display_clean(&ssd);
-        ssd1306_rect(&ssd, square_y, square_x, 8, 8, true, true);
-        draw_border(&ssd);
-        ssd1306_send_data(&ssd);
-
-        // Verifica se o botão do joystick foi pressionado
-        /*if (joystick_pressed) {
-            toggle_green_led_and_border(&ssd);
-            joystick_pressed = false;
-        }*/
-
-        // Verifica se o botão A foi pressionado
-        /*if (button_a_pressed) {
-            led_pwm_enabled = !led_pwm_enabled;
-            if (!led_pwm_enabled) {
-                pwm_set_gpio_level(LED_RGB_RED_PIN, 0);
-                pwm_set_gpio_level(LED_RGB_BLUE_PIN, 0);
-            }
-            button_a_pressed = false;
-        }*/
 
         // Verifica o nível de áudio do microfone
         uint16_t mic_level = read_mic();
-        mic_detect(&ssd, mic_level);
+
+        switch (mode) {
+            case 0:
+                display_waveform(&ssd, mic_level);
+                break;
+            case 1:
+                display_spectrum(&ssd, mic_level);
+                break;
+            case 2:
+                display_vu_meter(&ssd, mic_level);
+                break;
+        }
 
         sleep_ms(interval);
     }
