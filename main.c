@@ -495,6 +495,7 @@ void deactivate_alarm() {
 }
 
 int main() {
+    // Inicializa a biblioteca stdio
     stdio_init_all();
 
     // Inicializa os LEDs RGB
@@ -531,62 +532,62 @@ int main() {
     ssd1306_config(&ssd);
     ssd1306_send_data(&ssd);
 
+    // Limpa o display
     display_clean(&ssd);
     
+    // Limpa a matriz de LEDs WS2812
     ws2812_clear();
     ws2812_draw();
 
+    // Define o intervalo de amostragem do microfone
     uint64_t interval = 1000000 / MIC_SAMPLE_RATE;
 
+    // Loop principal do programa
     while (true) {
         // Obter o nível de áudio do microfone
         uint16_t mic_level = read_mic();
 
+        // Verifica o modo atual do aplicativo
         switch (app_mode) {
-            case MENU:            
+            case MENU:
+                // Exibe o menu no display
                 display_menu(&ssd);
                 if (button_a_pressed) {
+                    // Limpa o display e muda para o modo VIEWER
                     display_clean(&ssd);
-
                     app_mode = VIEWER;
-
                     button_a_pressed = false;
-
                     continue;
                 } 
                 
                 if (button_b_pressed) {
+                    // Limpa o display e muda para o modo ALARM
                     display_clean(&ssd);
-
                     app_mode = ALARM;
-
                     button_b_pressed = false;
-
                     continue;
                 }
                 break;
             case VIEWER:
                 if (button_a_pressed) {
+                    // Muda para o próximo modo de visualização
                     previous_mode = mode;
                     mode = (mode + 1) % MODE_LENGTH;
-
                     button_a_pressed = false;
-
                     continue;
                 }
 
                 if (joystick_pressed) {
+                    // Limpa a matriz de LEDs e o display, e volta para o menu
                     ws2812_clear();
                     ws2812_draw();
-
                     display_clean(&ssd);
-
                     app_mode = MENU;
                     joystick_pressed = false;
-
                     continue;
                 }
 
+                // Atualiza os LEDs RGB com base no nível do microfone
                 update_led_rgb(mic_level);
 
                 // Atualiza a matriz de LEDs WS2812 com base no nível do microfone
@@ -596,9 +597,10 @@ int main() {
                 uint16_t vrx, vry;
                 read_joystick(&vrx, &vry);
 
-                // Chamada para a função play_sound
+                // Chama a função para tocar som com base no nível do microfone e no volume
                 play_sound(mic_level, vry);
 
+                // Exibe a visualização correspondente ao modo atual
                 switch (mode) {
                     case MODE_WAVEFORM:
                         display_waveform(&ssd, mic_level);
@@ -614,20 +616,18 @@ int main() {
                         break;
                 }
 
+                // Aguarda o próximo intervalo de amostragem
                 sleep_us(interval);
                 break;
             case ALARM:
                 if (joystick_pressed) {
+                    // Limpa a matriz de LEDs e o display, desativa o alarme e volta para o menu
                     ws2812_clear();
                     ws2812_draw();
-
                     display_clean(&ssd);
-
                     deactivate_alarm();
-
                     app_mode = MENU;
                     joystick_pressed = false;
-
                     continue;
                 }
 
@@ -639,6 +639,7 @@ int main() {
                     deactivate_alarm();
                 }
 
+                // Aguarda o próximo intervalo de amostragem
                 sleep_us(interval);
                 break;
         }
