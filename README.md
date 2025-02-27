@@ -1,8 +1,8 @@
-# BitSound
+# BitSound 🎵
 
 BitSound é um projeto que utiliza o microcontrolador RP 2040 do Raspberry Pi Pico para criar um sistema de visualização de áudio com LEDs RGB, uma matriz de LEDs WS2812 e um display OLED SSD1306. O projeto também inclui funcionalidades de alarme e controle de volume usando um joystick.
 
-## Estrutura do Projeto
+## Estrutura do Projeto 📁
 
 ```
 .
@@ -30,7 +30,7 @@ BitSound é um projeto que utiliza o microcontrolador RP 2040 do Raspberry Pi Pi
 └── pico_sdk_import.cmake
 ```
 
-## Funcionalidades
+## Funcionalidades ✨
 
 - **Visualização de Áudio**: O projeto possui diferentes modos de visualização de áudio, incluindo forma de onda, espectro de frequência, medidor VU e radar.
 - **Controle de Volume**: O volume do som pode ser ajustado usando o joystick.
@@ -38,7 +38,7 @@ BitSound é um projeto que utiliza o microcontrolador RP 2040 do Raspberry Pi Pi
 - **Controle de LEDs RGB**: Os LEDs RGB são controlados com base no nível de áudio.
 - **Matriz de LEDs WS2812**: A matriz de LEDs WS2812 é atualizada progressivamente com base no nível de áudio.
 
-## Configuração do Hardware
+## Configuração do Hardware 🔧
 
 - **Microcontrolador**: Raspberry Pi Pico ou Raspberry Pi Pico W
 - **Display OLED**: SSD1306
@@ -48,11 +48,11 @@ BitSound é um projeto que utiliza o microcontrolador RP 2040 do Raspberry Pi Pi
 - **Buzzers**
 - **Botões**
 
-## Dependências
+## Dependências 📦
 
 - [Pico SDK](https://github.com/raspberrypi/pico-sdk)
 
-## Compilação e Execução
+## Compilação e Execução 🚀
 
 1. Clone o repositório:
     ```sh
@@ -79,17 +79,17 @@ BitSound é um projeto que utiliza o microcontrolador RP 2040 do Raspberry Pi Pi
 
 5. Carregue o firmware no Raspberry Pi Pico.
 
-## Uso
+## Uso 🎛️
 
 - **Menu**: Use os botões para navegar no menu e selecionar modos de visualização ou armar o alarme.
 - **Visualização**: O modo de visualização exibe diferentes formas de visualização de áudio no display OLED e na matriz de LEDs.
 - **Alarme**: O alarme é disparado quando o nível de áudio excede um limite especificado. Use o joystick para desativar o alarme.
 
-## Contribuição
+## Contribuição 🤝
 
 Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests.
 
-## Licença
+## Licença 📄
 
 Este projeto está licenciado sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
 
