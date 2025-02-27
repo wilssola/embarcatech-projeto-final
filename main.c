@@ -361,26 +361,6 @@ void display_radar(ssd1306_t *ssd, uint16_t mic_value) {
     ssd1306_send_data(ssd);
 }
 
-void mic_detect(uint16_t mic_value) {
-    if (mic_value > MIC_LIMIAR_2) {
-        level_red = ((mic_value * 255) / (2 * MIC_LIMIAR_2)) % 255;
-        level_blue = 0;
-        level_green = 0;
-    } else if (mic_value > MIC_LIMIAR_1 && mic_value < MIC_LIMIAR_2) {
-        level_red = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
-        level_blue = 0;
-        level_green = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
-    } else {
-        level_green = ((mic_value * 255) / MIC_LIMIAR_1) % 255;
-        level_red = 0;
-        level_blue = 0;
-    }
-    
-    pwm_set_gpio_level(LED_RGB_RED_PIN, level_red);
-    pwm_set_gpio_level(LED_RGB_BLUE_PIN, level_blue);
-    pwm_set_gpio_level(LED_RGB_GREEN_PIN, level_green);
-}
-
 // Função para exibir o menu
 void display_menu(ssd1306_t *ssd) {
     display_clean(ssd);
@@ -413,6 +393,26 @@ void play_sound(uint16_t mic_value, uint16_t volume) {
     gpio_put(BUZZER_B_PIN, false);
 }
 
+void update_led_rgb(uint16_t mic_value) {
+    if (mic_value > MIC_LIMIAR_2) {
+        level_red = ((mic_value * 255) / (2 * MIC_LIMIAR_2)) % 255;
+        level_blue = 0;
+        level_green = 0;
+    } else if (mic_value > MIC_LIMIAR_1 && mic_value < MIC_LIMIAR_2) {
+        level_red = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
+        level_blue = 0;
+        level_green = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
+    } else {
+        level_green = ((mic_value * 255) / MIC_LIMIAR_1) % 255;
+        level_red = 0;
+        level_blue = 0;
+    }
+    
+    pwm_set_gpio_level(LED_RGB_RED_PIN, level_red);
+    pwm_set_gpio_level(LED_RGB_BLUE_PIN, level_blue);
+    pwm_set_gpio_level(LED_RGB_GREEN_PIN, level_green);
+}
+
 void update_led_matrix_progressive(uint16_t mic_level) {
     // Limpa a matriz de LEDs
     ws2812_clear();
@@ -427,15 +427,15 @@ void update_led_matrix_progressive(uint16_t mic_level) {
     for (uint8_t i = 0; i < num_leds; i++) {
         uint32_t color;
         if (i < 8) {
-            color = 0x00FF00; // Verde
+            color = 0xFF0000; // Vermelho
         } else if (i < 17) {
             color = 0xFFFF00; // Amarelo
         } else {
-            color = 0xFF0000; // Vermelho
+            color = 0x00FF00; // Verde
         }
 
         uint8_t x = i % MATRIX_WIDTH;
-        uint8_t y = i / MATRIX_WIDTH;
+        uint8_t y = MATRIX_HEIGHT - 1 - (i / MATRIX_WIDTH); // Alteração para acender de baixo para cima
         ws2812_set_pixel(x, y, color);
     }
 
@@ -509,12 +509,13 @@ int main() {
                     display_clean(&ssd);
                     app_mode = MENU;
                     both_buttons_pressed = false;
+                    ws2812_clear();
                 }
 
                 // Verifica o nível de áudio do microfone
                 uint16_t mic_level = read_mic();
 
-                mic_detect(mic_level);
+                update_led_rgb(mic_level);
 
                 // Atualiza a matriz de LEDs WS2812 com base no nível do microfone
                 update_led_matrix_progressive(mic_level);
