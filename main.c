@@ -288,7 +288,7 @@ uint16_t read_mic() {
     return adc_read();
 }
 
-void display_waveform(ssd1306_t *ssd, uint16_t mic_value) {
+void display_waveform(ssd1306_t *ssd, uint16_t mic_level) {
     if (previous_mode != MODE_WAVEFORM) {
         display_clean(ssd);
         previous_mode = MODE_WAVEFORM;
@@ -297,7 +297,7 @@ void display_waveform(ssd1306_t *ssd, uint16_t mic_value) {
     static uint8_t x = 0;
     static uint8_t prev_y = HEIGHT / 2;
 
-    uint8_t y = HEIGHT / 2 + (mic_value - 2048) / 16;
+    uint8_t y = HEIGHT / 2 + (mic_level - 2048) / 16;
 
     ssd1306_line(ssd, x, prev_y, x + 1, y, true);
     ssd1306_send_data(ssd);
@@ -310,19 +310,19 @@ void display_waveform(ssd1306_t *ssd, uint16_t mic_value) {
     }
 }
 
-void display_spectrum(ssd1306_t *ssd, uint16_t mic_value) {
+void display_spectrum(ssd1306_t *ssd, uint16_t mic_level) {
     static uint8_t bar_width = WIDTH / 16;
     static uint8_t bar_heights[16] = {0};
-    static uint8_t mic_values[16] = {0};
+    static uint8_t mic_levels[16] = {0};
     static uint8_t index = 0;
 
     // Adiciona o valor do microfone ao buffer circular
-    mic_values[index] = mic_value;
+    mic_levels[index] = mic_level;
     index = (index + 1) % 16;
 
     // Calcula a altura das barras com base nos valores do microfone
     for (uint8_t i = 0; i < 16; ++i) {
-        uint8_t value = mic_values[(index + i) % 16];
+        uint8_t value = mic_levels[(index + i) % 16];
         bar_heights[i] = (value % 256) / 4;
     }
 
@@ -336,24 +336,24 @@ void display_spectrum(ssd1306_t *ssd, uint16_t mic_value) {
     ssd1306_send_data(ssd);
 }
 
-void display_vu_meter(ssd1306_t *ssd, uint16_t mic_value) {
+void display_vu_meter(ssd1306_t *ssd, uint16_t mic_level) {
     display_clean(ssd);
 
-    uint8_t bar_length = (mic_value * WIDTH) / MIC_LIMIAR_2;
+    uint8_t bar_length = (mic_level * WIDTH) / MIC_LIMIAR_2;
 
     ssd1306_rect(ssd, HEIGHT / 2 - 4, 0, bar_length, 8, true, true);
 
     ssd1306_send_data(ssd);
 }
 
-void display_radar(ssd1306_t *ssd, uint16_t mic_value) {
+void display_radar(ssd1306_t *ssd, uint16_t mic_level) {
     display_clean(ssd);
 
     // Desenha o círculo do radar
     ssd1306_circle(ssd, WIDTH / 2, HEIGHT / 2, HEIGHT / 2 - 1, true);
 
     // Desenha a linha do radar
-    uint8_t angle = ((mic_value * 360) / MIC_LIMIAR_2) % 360;
+    uint8_t angle = ((mic_level * 360) / MIC_LIMIAR_2) % 360;
     uint8_t x = WIDTH / 2 + (HEIGHT / 2 - 1) * cos(angle * M_PI / 180);
     uint8_t y = HEIGHT / 2 + (HEIGHT / 2 - 1) * -sin(angle * M_PI / 180);
     ssd1306_line(ssd, WIDTH / 2, HEIGHT / 2, x, y, true);
@@ -370,15 +370,24 @@ void display_menu(ssd1306_t *ssd) {
     ssd1306_send_data(ssd);
 }
 
-void display_alarm_message(ssd1306_t *ssd) {
+void display_alarm_message(ssd1306_t *ssd, uint16_t mic_level) {
     display_clean(ssd);
     ssd1306_draw_string(ssd, "Alarme Disparado", 0, 0);
+    ssd1306_draw_string(ssd, mic_level, 0, 16);
     ssd1306_send_data(ssd);
 }
 
-void play_sound(uint16_t mic_value, uint16_t volume) {
+void display_alarm_activated_message(ssd1306_t *ssd, uint16_t mic_level) {
+    display_clean(ssd);
+    ssd1306_draw_string(ssd, "Alarme Armado", 0, 0);
+    ssd1306_draw_string(ssd, mic_level, 0, 16);
+    ssd1306_send_data(ssd);
+}
+
+
+void play_sound(uint16_t mic_level, uint16_t volume) {
     // Define a frequência do som com base no valor do microfone
-    uint16_t frequency = (mic_value * 1024) / MIC_LIMIAR_2;
+    uint16_t frequency = (mic_level * 1024) / MIC_LIMIAR_2;
 
     // Ajusta o volume do som
     if (volume < 128) { // Verifica se o joystick está na posição inferior
@@ -399,17 +408,17 @@ void play_sound(uint16_t mic_value, uint16_t volume) {
     gpio_put(BUZZER_B_PIN, false);
 }
 
-void update_led_rgb(uint16_t mic_value) {
-    if (mic_value > MIC_LIMIAR_2) {
-        level_red = ((mic_value * 255) / (2 * MIC_LIMIAR_2)) % 255;
+void update_led_rgb(uint16_t mic_level) {
+    if (mic_level > MIC_LIMIAR_2) {
+        level_red = ((mic_level * 255) / (2 * MIC_LIMIAR_2)) % 255;
         level_blue = 0;
         level_green = 0;
-    } else if (mic_value > MIC_LIMIAR_1 && mic_value < MIC_LIMIAR_2) {
-        level_red = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
+    } else if (mic_level > MIC_LIMIAR_1 && mic_level < MIC_LIMIAR_2) {
+        level_red = ((mic_level * 255) / MIC_LIMIAR_2) % 255;
         level_blue = 0;
-        level_green = ((mic_value * 255) / MIC_LIMIAR_2) % 255;
+        level_green = ((mic_level * 255) / MIC_LIMIAR_2) % 255;
     } else {
-        level_green = ((mic_value * 255) / MIC_LIMIAR_1) % 255;
+        level_green = ((mic_level * 255) / MIC_LIMIAR_1) % 255;
         level_red = 0;
         level_blue = 0;
     }
@@ -523,19 +532,32 @@ int main() {
                 display_menu(&ssd);
                 if (button_a_pressed) {
                     display_clean(&ssd);
+
                     app_mode = VIEWER;
+
                     button_a_pressed = false;
-                } else if (button_b_pressed) {
+
+                    continue;
+                } 
+                
+                if (button_b_pressed) {
                     display_clean(&ssd);
+
                     app_mode = ALARM;
+
                     button_b_pressed = false;
+
+                    continue;
                 }
                 break;
             case VIEWER:
                 if (button_a_pressed) {
                     previous_mode = mode;
                     mode = (mode + 1) % MODE_LENGTH;
+
                     button_a_pressed = false;
+
+                    continue;
                 }
 
                 if (joystick_pressed) {
@@ -543,8 +565,11 @@ int main() {
                     ws2812_draw();
 
                     display_clean(&ssd);
+
                     app_mode = MENU;
                     joystick_pressed = false;
+
+                    continue;
                 }
 
                 update_led_rgb(mic_level);
@@ -574,14 +599,9 @@ int main() {
                         break;
                 }
 
-                sleep_ms(interval);
+                sleep_us(interval);
                 break;
             case ALARM:
-                if (mic_level > 2 * MIC_LIMIAR_2) {
-                    display_alarm_message(&ssd);
-                    activate_alarm();
-                }
-
                 if (joystick_pressed) {
                     ws2812_clear();
                     ws2812_draw();
@@ -591,8 +611,20 @@ int main() {
                     deactivate_alarm();
 
                     app_mode = MENU;
-                    button_b_pressed = false;
+                    joystick_pressed = false;
+
+                    continue;
                 }
+
+                if (mic_level > MIC_LIMIAR_2) {
+                    display_alarm_message(&ssd, mic_level);
+                    activate_alarm();
+                } else {
+                    display_alarm_activated_message(&ssd, mic_level);
+                    deactivate_alarm();
+                }
+
+                sleep_us(interval);
                 break;
         }
     }
