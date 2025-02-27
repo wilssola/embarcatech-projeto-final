@@ -373,17 +373,24 @@ void display_menu(ssd1306_t *ssd) {
 void display_alarm_message(ssd1306_t *ssd, uint16_t mic_level) {
     display_clean(ssd);
     ssd1306_draw_string(ssd, "Alarme Disparado", 0, 0);
-    ssd1306_draw_string(ssd, mic_level, 0, 16);
+    
+    char mic_level_str[16];
+    snprintf(mic_level_str, sizeof(mic_level_str), "%u", mic_level);
+    ssd1306_draw_string(ssd, mic_level_str, 0, 16);
+    
     ssd1306_send_data(ssd);
 }
 
 void display_alarm_activated_message(ssd1306_t *ssd, uint16_t mic_level) {
     display_clean(ssd);
     ssd1306_draw_string(ssd, "Alarme Armado", 0, 0);
-    ssd1306_draw_string(ssd, mic_level, 0, 16);
+    
+    char mic_level_str[16];
+    snprintf(mic_level_str, sizeof(mic_level_str), "%u", mic_level);
+    ssd1306_draw_string(ssd, mic_level_str, 0, 16);
+    
     ssd1306_send_data(ssd);
 }
-
 
 void play_sound(uint16_t mic_level, uint16_t volume) {
     // Define a frequência do som com base no valor do microfone
