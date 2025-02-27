@@ -469,10 +469,13 @@ void activate_alarm() {
     while (true) {
         gpio_put(BUZZER_A_PIN, true);
         gpio_put(BUZZER_B_PIN, true);
-        sleep_ms(100);
+
+        sleep_us(100000 / 400);
+
         gpio_put(BUZZER_A_PIN, false);
         gpio_put(BUZZER_B_PIN, false);
-        sleep_ms(100);
+
+        sleep_us(100000 / 800);
 
         if (button_b_pressed) {
             button_b_pressed = false;
@@ -624,8 +627,7 @@ int main() {
                 }
 
                 if (mic_level > MIC_LIMIAR_2) {
-                    display_alarm_message(&ssd, mic_level);
-                    activate_alarm();
+                    activate_alarm(mic_level);
                 } else {
                     display_alarm_activated_message(&ssd, mic_level);
                     deactivate_alarm();
