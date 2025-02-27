@@ -443,6 +443,27 @@ void update_led_matrix_progressive(uint16_t mic_level) {
     ws2812_draw();
 }
 
+void activate_alarm() {
+    while (true) {
+        gpio_put(BUZZER_A_PIN, true);
+        gpio_put(BUZZER_B_PIN, true);
+        sleep_ms(100);
+        gpio_put(BUZZER_A_PIN, false);
+        gpio_put(BUZZER_B_PIN, false);
+        sleep_ms(100);
+
+        if (button_b_pressed) {
+            button_b_pressed = false;
+            break;
+        }
+    }
+}
+
+void deactivate_alarm() {
+    gpio_put(BUZZER_A_PIN, false);
+    gpio_put(BUZZER_B_PIN, false);
+}
+
 int main() {
     stdio_init_all();
 
@@ -481,10 +502,16 @@ int main() {
     ssd1306_send_data(&ssd);
 
     display_clean(&ssd);
+    
+    ws2812_clear();
+    ws2812_draw();
 
     uint64_t interval = 1000000 / MIC_SAMPLE_RATE;
 
     while (true) {
+        // Obter o nível de áudio do microfone
+        uint16_t mic_level = read_mic();
+
         switch (app_mode) {
             case MENU:            
                 display_menu(&ssd);
@@ -506,14 +533,13 @@ int main() {
                 }
 
                 if (joystick_pressed) {
+                    ws2812_clear();
+                    ws2812_draw();
+
                     display_clean(&ssd);
                     app_mode = MENU;
-                    both_buttons_pressed = false;
-                    ws2812_clear();
+                    joystick_pressed = false;
                 }
-
-                // Verifica o nível de áudio do microfone
-                uint16_t mic_level = read_mic();
 
                 update_led_rgb(mic_level);
 
@@ -543,6 +569,23 @@ int main() {
                 }
 
                 sleep_ms(interval);
+                break;
+            case ALARM:
+                if (mic_level > 2 * MIC_LIMIAR_2) {
+                    activate_alarm();
+                }
+
+                if (joystick_pressed) {
+                    ws2812_clear();
+                    ws2812_draw();
+
+                    display_clean(&ssd);
+
+                    deactivate_alarm();
+
+                    app_mode = MENU;
+                    button_b_pressed = false;
+                }
                 break;
         }
     }
