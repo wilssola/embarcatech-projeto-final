@@ -467,16 +467,21 @@ void update_led_matrix_progressive(uint16_t mic_level) {
 
 void activate_alarm() {
     while (true) {
+        // Troca o estado dos buzzers para gerar o som do alarme
         gpio_put(BUZZER_A_PIN, true);
         gpio_put(BUZZER_B_PIN, true);
 
+        // Aguarda um curto período de tempo
         sleep_us(100000 / 400);
 
+        // Desativa os buzzers
         gpio_put(BUZZER_A_PIN, false);
         gpio_put(BUZZER_B_PIN, false);
 
+        // Aguarda outro curto período de tempo
         sleep_us(100000 / 800);
 
+        // Verifica se o botão B foi pressionado para desativar o alarme
         if (button_b_pressed) {
             button_b_pressed = false;
             break;
@@ -626,6 +631,7 @@ int main() {
                     continue;
                 }
 
+                // Dispara o alarme se o nível do microfone for maior que o limiar 2 em 10%
                 if (mic_level > 1.1 * MIC_LIMIAR_2) {
                     activate_alarm(mic_level);
                 } else {
