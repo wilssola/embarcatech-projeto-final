@@ -76,6 +76,7 @@ void led_init() {
     gpio_set_dir(LED_RGB_BLUE_PIN, GPIO_OUT);
 }
 
+// Função para configurar o LED RGB usando PWM
 void led_pwm_setup(uint led_pin, uint *slice_num, uint16_t led_level) {
     gpio_set_function(led_pin, GPIO_FUNC_PWM);
 
@@ -89,6 +90,7 @@ void led_pwm_setup(uint led_pin, uint *slice_num, uint16_t led_level) {
     pwm_set_enabled(*slice_num, true);
 }
 
+// Função para inicializar o LED RGB usando PWM
 void led_pwm_init() {
     led_pwm_setup(LED_RGB_RED_PIN, &slice_num_red, 0);
 
@@ -121,6 +123,7 @@ void ws2812_init() {
     ws2812_program_init(pio, sm, offset, WS2812_PIN, 800000, false);
 }
 
+// Função para inicializar o joystick
 void joystick_init() {
     adc_init();
     adc_gpio_init(JOYSTICK_VRX_PIN);
@@ -133,6 +136,7 @@ void joystick_init() {
     gpio_set_irq_enabled_with_callback(JOYSTICK_SW_PIN, GPIO_IRQ_EDGE_FALL, true, &gpio_button_callback);
 }
 
+// Função para inicializar os buzzers
 void buzzer_init() {
     gpio_init(BUZZER_A_PIN);
     gpio_set_dir(BUZZER_A_PIN, GPIO_OUT);
@@ -200,6 +204,7 @@ void display_clean(ssd1306_t *ssd) {
     ssd1306_send_data(ssd);
 }
 
+// Função para trocar o estado do LED verde
 void toggle_green_led(ssd1306_t *ssd) {
     gpio_put(LED_RGB_BLUE_PIN, 0);
 
@@ -217,6 +222,7 @@ void toggle_green_led(ssd1306_t *ssd) {
     printf("%s\n", message);
 }
 
+// Função para trocar o estado do LED azul
 void toggle_blue_led(ssd1306_t *ssd) {            
     gpio_put(LED_RGB_GREEN_PIN, 0);
 
@@ -234,6 +240,7 @@ void toggle_blue_led(ssd1306_t *ssd) {
     printf("%s\n", message);
 }
 
+// Função para ler o valor do eixo X e Y do joystick
 void read_joystick(uint16_t *vrx, uint16_t *vry) {
     adc_select_input(ADC_CHANNEL_1);
     sleep_us(1);
@@ -261,6 +268,7 @@ void read_joystick(uint16_t *vrx, uint16_t *vry) {
     }
 }
 
+// Função para desenhar um quadrado no display
 void draw_border(ssd1306_t *ssd) {
     if (border_style) {
         switch (border_style_index) {
@@ -288,6 +296,7 @@ uint16_t read_mic() {
     return adc_read();
 }
 
+// Função para exibir o senoidal no display
 void display_waveform(ssd1306_t *ssd, uint16_t mic_level) {
     if (previous_mode != MODE_WAVEFORM) {
         display_clean(ssd);
@@ -310,6 +319,7 @@ void display_waveform(ssd1306_t *ssd, uint16_t mic_level) {
     }
 }
 
+// Função para exibir o espectro de frequência no display
 void display_spectrum(ssd1306_t *ssd, uint16_t mic_level) {
     static uint8_t bar_width = WIDTH / 16;
     static uint8_t bar_heights[16] = {0};
@@ -336,6 +346,7 @@ void display_spectrum(ssd1306_t *ssd, uint16_t mic_level) {
     ssd1306_send_data(ssd);
 }
 
+// Função para exibir o medidor VU no display
 void display_vu_meter(ssd1306_t *ssd, uint16_t mic_level) {
     display_clean(ssd);
 
@@ -346,6 +357,7 @@ void display_vu_meter(ssd1306_t *ssd, uint16_t mic_level) {
     ssd1306_send_data(ssd);
 }
 
+// Função para exibir o radar no display
 void display_radar(ssd1306_t *ssd, uint16_t mic_level) {
     display_clean(ssd);
 
@@ -381,17 +393,23 @@ void display_alarm_message(ssd1306_t *ssd, uint16_t mic_level) {
     ssd1306_send_data(ssd);
 }
 
+// Função para exibir a mensagem "Alarme Armado" no display
 void display_alarm_activated_message(ssd1306_t *ssd, uint16_t mic_level) {
+    // Limpa o display
     display_clean(ssd);
+    // Desenha a mensagem "Alarme Armado" no display
     ssd1306_draw_string(ssd, "Alarme Armado", 0, 0);
     
+    // Converte o nível do microfone para string e desenha no display
     char mic_level_str[16];
     snprintf(mic_level_str, sizeof(mic_level_str), "%u", mic_level);
     ssd1306_draw_string(ssd, mic_level_str, 0, 16);
     
+    // Envia os dados para o display
     ssd1306_send_data(ssd);
 }
 
+// Função para tocar som com base no nível do microfone e no volume
 void play_sound(uint16_t mic_level, uint16_t volume) {
     // Define a frequência do som com base no valor do microfone
     uint16_t frequency = (mic_level * 1024) / MIC_LIMIAR_2;
@@ -415,7 +433,9 @@ void play_sound(uint16_t mic_level, uint16_t volume) {
     gpio_put(BUZZER_B_PIN, false);
 }
 
+// Função para atualizar o LED RGB com base no nível do microfone
 void update_led_rgb(uint16_t mic_level) {
+    // Atualiza os níveis de cor dos LEDs RGB com base no nível do microfone
     if (mic_level > MIC_LIMIAR_2) {
         level_red = ((mic_level * 255) / (2 * MIC_LIMIAR_2)) % 255;
         level_blue = 0;
@@ -430,11 +450,13 @@ void update_led_rgb(uint16_t mic_level) {
         level_blue = 0;
     }
     
+    // Define os níveis de PWM para os LEDs RGB
     pwm_set_gpio_level(LED_RGB_RED_PIN, level_red);
     pwm_set_gpio_level(LED_RGB_BLUE_PIN, level_blue);
     pwm_set_gpio_level(LED_RGB_GREEN_PIN, level_green);
 }
 
+// Função para atualizar a matriz de LEDs WS2812 progressivamente
 void update_led_matrix_progressive(uint16_t mic_level) {
     // Limpa a matriz de LEDs
     ws2812_clear();
@@ -465,6 +487,7 @@ void update_led_matrix_progressive(uint16_t mic_level) {
     ws2812_draw();
 }
 
+// Função para ativar o alarme
 void activate_alarm() {
     while (true) {
         // Troca o estado dos buzzers para gerar o som do alarme
@@ -489,7 +512,9 @@ void activate_alarm() {
     }
 }
 
+// Função para desativar o alarme
 void deactivate_alarm() {
+    // Desativa os buzzers
     gpio_put(BUZZER_A_PIN, false);
     gpio_put(BUZZER_B_PIN, false);
 }
