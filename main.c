@@ -370,6 +370,12 @@ void display_menu(ssd1306_t *ssd) {
     ssd1306_send_data(ssd);
 }
 
+void display_alarm_message(ssd1306_t *ssd) {
+    display_clean(ssd);
+    ssd1306_draw_string(ssd, "Alarme Disparado", 0, 0);
+    ssd1306_send_data(ssd);
+}
+
 void play_sound(uint16_t mic_value, uint16_t volume) {
     // Define a frequência do som com base no valor do microfone
     uint16_t frequency = (mic_value * 1024) / MIC_LIMIAR_2;
@@ -572,6 +578,7 @@ int main() {
                 break;
             case ALARM:
                 if (mic_level > 2 * MIC_LIMIAR_2) {
+                    display_alarm_message(&ssd);
                     activate_alarm();
                 }
 
