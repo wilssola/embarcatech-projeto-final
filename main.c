@@ -413,6 +413,36 @@ void play_sound(uint16_t mic_value, uint16_t volume) {
     gpio_put(BUZZER_B_PIN, false);
 }
 
+void update_led_matrix_progressive(uint16_t mic_level) {
+    // Limpa a matriz de LEDs
+    ws2812_clear();
+
+    // Calcula o número de LEDs a serem acesos com base no nível do microfone
+    uint8_t num_leds = (mic_level * 25) / MIC_LIMIAR_2;
+    if (num_leds > 25) {
+        num_leds = 25;
+    }
+
+    // Acende os LEDs progressivamente com cores diferentes
+    for (uint8_t i = 0; i < num_leds; i++) {
+        uint32_t color;
+        if (i < 8) {
+            color = 0x00FF00; // Verde
+        } else if (i < 17) {
+            color = 0xFFFF00; // Amarelo
+        } else {
+            color = 0xFF0000; // Vermelho
+        }
+
+        uint8_t x = i % MATRIX_WIDTH;
+        uint8_t y = i / MATRIX_WIDTH;
+        ws2812_set_pixel(x, y, color);
+    }
+
+    // Atualiza a matriz de LEDs
+    ws2812_draw();
+}
+
 int main() {
     stdio_init_all();
 
@@ -485,6 +515,9 @@ int main() {
                 uint16_t mic_level = read_mic();
 
                 mic_detect(mic_level);
+
+                // Atualiza a matriz de LEDs WS2812 com base no nível do microfone
+                update_led_matrix_progressive(mic_level);
 
                 // Lê o valor do eixo Y do joystick para ajustar o volume
                 uint16_t vrx, vry;
