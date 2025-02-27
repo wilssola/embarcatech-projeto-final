@@ -626,7 +626,7 @@ int main() {
                     continue;
                 }
 
-                if (mic_level > MIC_LIMIAR_2) {
+                if (mic_level > 1.1 * MIC_LIMIAR_2) {
                     activate_alarm(mic_level);
                 } else {
                     display_alarm_activated_message(&ssd, mic_level);
