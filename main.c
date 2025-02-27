@@ -656,8 +656,8 @@ int main() {
                     continue;
                 }
 
-                // Dispara o alarme se o nível do microfone for maior que o limiar 2 em 5%
-                if (mic_level > 1.05 * MIC_LIMIAR_2) {
+                // Dispara o alarme se o nível do microfone for maior que o limite especificado
+                if (mic_level > MIC_LIMIAR_2) {
                     activate_alarm(mic_level);
                 } else {
                     display_alarm_activated_message(&ssd, mic_level);
